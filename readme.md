@@ -1,10 +1,10 @@
-                  _   _            _             _ _
+```                  _   _            _             _ _
   _ __   ___  ___| |_| |_ ___  ___| |_       ___| (_)
  | '_ \ / _ \/ __| __| __/ _ \/ __| __|____ / __| | |
  | |_) | (_) \__ \ |_| ||  __/\__ \ ||_____| (__| | |
  | .__/ \___/|___/\__|\__\___||___/\__|     \___|_|_|
  |_|
-
+```
 > **⚠ WARNING: This is an alpha version**  
 > This app is in early development. Some features may be broken. Use at your own risk.
 ----------
@@ -12,7 +12,7 @@
 ## Usage
 
 ```
-git clone <path>
+git clone https://github.com/postnerd/posttest-cli.git
 cd posttest-cli
 npm install || npm install . -g
 ```
@@ -28,6 +28,7 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ```
 
 ## Options
+```
 ┌────────┬────────────────────────────────┐
 │ option │ description                    │
 ├────────┼────────────────────────────────┤
@@ -39,6 +40,7 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ├────────┼────────────────────────────────┤
 │ -sf    │ Optional: add stockfish engine │
 └────────┴────────────────────────────────┘
+```
 
 ### -p position config file
 
