@@ -14,17 +14,22 @@
 ```
 git clone https://github.com/postnerd/posttest-cli.git
 cd posttest-cli
-npm install || npm install . -g
+npm install
 ```
 
-*Example for global installation:*
+**Optional global installation:**
 ```
-posttest -e engines.config.example.json -p positions.config.example.json -d -sf
+npm install . -g
 ```
 
-*Example for local installation:*
+**Example for global installation:**
 ```
-npm start -- -e engines.config.example.json -p positions.config.example.json -d -sf
+posttest -e engines.config.example.json -p positions.config.example.json
+```
+
+**Example for local installation:**
+```
+npm start -- -e engines.config.example.json -p positions.config.example.json
 ```
 
 ## Options
@@ -43,8 +48,11 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ```
 
 ### -p position config file
-
-*Example*
+Path for position config file.
+```
+-p positions.config.example.json
+```
+**Example file**
 ```
 [
     {
@@ -57,8 +65,12 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 See the example config file _positions.config.example.json_. All positions are from stockfish internal bench function.
 
 ### -e engines config file
+Path for engine config file.
+```
+-e engines.config.example.json
+```
 
-*Example*
+**Example file**
 ```
 [
     {
@@ -80,7 +92,15 @@ See the example config file _engines.config.example.json_.
 
 Shows additional debug informations.
 
+```
+posttest -e engines.config.example.json -p positions.config.example.json -d
+```
+
 ### -sf stockfish
 
 Adds a version of stockfishjs to the performance test without the need to have stockfish added to the engine config file.
+
+```
+posttest -e engines.config.example.json -p positions.config.example.json -sf
+```
 
