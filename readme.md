@@ -19,7 +19,7 @@ npm install || npm install . -g
 
 *Example for global installation:*
 ```
-posttest -e engines.config.example.json -p positions.config.example.json -d -sf´
+posttest -e engines.config.example.json -p positions.config.example.json -d -sf
 ```
 
 *Example for local installation:*
