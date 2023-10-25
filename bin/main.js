@@ -302,7 +302,7 @@ class Run {
     }
     printEngineStatus() {
         const engineTable = new Table({
-            head: [chalk.blue("id"), chalk.blue("name"), chalk.blue("executable"), chalk.blue("strings"), chalk.blue("status")],
+            head: [chalk.cyan("id"), chalk.cyan("name"), chalk.cyan("executable"), chalk.cyan("strings"), chalk.cyan("status")],
             style: {
                 head: [],
             },
@@ -327,7 +327,7 @@ class Run {
             return;
         }
         const resultTable = new Table({
-            head: [chalk.blue(`depth: ${positionToPrint.depth}`), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("best move")],
+            head: [chalk.cyan(`depth: ${positionToPrint.depth}`), chalk.cyan("time"), chalk.cyan("nodes"), chalk.cyan("nps"), chalk.cyan("best move")],
             style: {
                 head: [],
             },
@@ -344,7 +344,7 @@ class Run {
     }
     printOverallResults() {
         const overallTable = new Table({
-            head: [chalk.blue("Overall"), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("failed")],
+            head: [chalk.cyan("Overall"), chalk.cyan("time"), chalk.cyan("nodes"), chalk.cyan("nps"), chalk.cyan("failed")],
             style: {
                 head: [],
             },
