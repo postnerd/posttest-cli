@@ -1,10 +1,10 @@
 #! /usr/bin/env node
-import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import figlet from 'figlet';
+import { spawn } from 'child_process';
 
 const logger = {
     isDebug: false,
@@ -121,12 +121,14 @@ function getEnginesConfigData(enginesPath) {
     return enginesData;
 }
 
-function getUCIEngineName(engineConfig) {
+function getUCIEngineName(engine) {
     let name = "";
     return new Promise((resolve, reject) => {
         // TODO: Reject after 5 seconds, if engine doesn't respond
-        const engine = spawn(engineConfig.executable, engineConfig.strings);
-        engine.stdout.on("data", (data) => {
+        const engineProcess = spawn(engine.executable, engine.strings);
+        if (engineProcess.stdout === null || engineProcess.stderr === null || engineProcess.stdin === null)
+            throw new Error("engines stdout, stdin or stderr is null");
+        engineProcess.stdout.on("data", (data) => {
             const lines = data.toString().split("\n");
             for (let i = 0; i < lines.length; i++) {
                 const lineData = lines[i].split(" ");
@@ -135,21 +137,21 @@ function getUCIEngineName(engineConfig) {
                         name = lineData.slice(i + 2).join(" ");
                     }
                     else if (lineData[i] === "uciok") {
-                        engine.stdin.end();
+                        engineProcess.stdin.end();
                     }
                 }
             }
         });
-        engine.stderr.on("data", (data) => {
+        engineProcess.stderr.on("data", (data) => {
             logger.debug(`${data}`);
         });
-        engine.on("error", (error) => {
+        engineProcess.on("error", (error) => {
             reject({
                 status: "error",
                 error: error.message,
             });
         });
-        engine.on("close", (code) => {
+        engineProcess.on("close", (code) => {
             logger.debug(`Child process exited with code ${code}`);
             if (name === "") {
                 reject({
@@ -164,18 +166,20 @@ function getUCIEngineName(engineConfig) {
                 });
             }
         });
-        engine.stdin.write("uci\n");
+        engineProcess.stdin.write("uci\n");
     });
 }
-function getUCIPositionInfo(engineConfig, fen, depth) {
+function getUCIPositionInfo(engine, fen, depth) {
     return new Promise((resolve, reject) => {
         let nps = 0;
         let nodes = 0;
         let time = 0;
         let bestMove = "";
         // TODO: Reject after X seconds, if engine doesn't respond
-        const engine = spawn(engineConfig.executable, engineConfig.strings);
-        engine.stdout.on("data", (data) => {
+        const engineProcess = spawn(engine.executable, engine.strings);
+        if (engineProcess.stdout === null || engineProcess.stderr === null || engineProcess.stdin === null)
+            throw new Error("engines stdout, stdin or stderr is null");
+        engineProcess.stdout.on("data", (data) => {
             const lines = data.toString().split("\n");
             for (let i = 0; i < lines.length; i++) {
                 logger.debug(lines[i]);
@@ -192,18 +196,18 @@ function getUCIPositionInfo(engineConfig, fen, depth) {
                     }
                     else if (lineData[i] === "bestmove") {
                         bestMove = lineData[i + 1];
-                        engine.stdin.end();
+                        engineProcess.stdin.end();
                     }
                 }
             }
         });
-        engine.stderr.on("data", (data) => {
+        engineProcess.stderr.on("data", (data) => {
             logger.debug(`${data}`);
         });
-        engine.on("error", (error) => {
+        engineProcess.on("error", (error) => {
             reject(error.message);
         });
-        engine.on("close", (code) => {
+        engineProcess.on("close", (code) => {
             logger.debug(`Child process exited with code ${code}`);
             if (bestMove === "" || nodes === 0) {
                 reject("Couldn't get position infos");
@@ -215,12 +219,158 @@ function getUCIPositionInfo(engineConfig, fen, depth) {
                 nodes: nodes,
                 time: time,
                 bestMove: bestMove,
+                engineId: engine.id,
                 status: "success",
             });
         });
-        engine.stdin.write(`position fen ${fen}\n`);
-        engine.stdin.write(`go depth ${depth}\n`);
+        engineProcess.stdin.write(`position fen ${fen}\n`);
+        engineProcess.stdin.write(`go depth ${depth}\n`);
     });
+}
+
+class Run {
+    engines = [];
+    positions;
+    results = [];
+    constructor(engines, positions) {
+        engines.forEach((engine, index) => {
+            this.engines.push({
+                id: index,
+                name: "engine" + index,
+                executable: engine.executable,
+                strings: engine.strings,
+                status: "success",
+            });
+        });
+        this.positions = positions;
+        logger.debug(`Setup run object with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
+        this.testEngines();
+        this.startRun();
+    }
+    getEngineNameById(id) {
+        return this.engines[id].name;
+    }
+    testEngines() {
+        logger.debug("Testing engines ...");
+        this.engines.forEach(async (engine) => {
+            try {
+                let name = await getUCIEngineName(engine);
+                engine.name = name.name;
+                logger.debug(`UCI spoort for engine ${name.name} detected.`);
+            }
+            catch (error) {
+                logger.error(`Engine with executable "${engine.executable}" and strings "${engine.strings}" doesn't work.`);
+                engine.status = "error";
+            }
+        });
+        this.printEngineStatus();
+    }
+    async startRun() {
+        logger.debug("Starting run ...");
+        for (let i = 0; i < this.positions.length; i++) {
+            const position = this.positions[i];
+            for (let j = 0; j < this.engines.length; j++) {
+                const engine = this.engines[j];
+                if (engine.status === "error") {
+                    continue;
+                }
+                try {
+                    const fen = position.fen;
+                    const depth = position.depth;
+                    const result = await getUCIPositionInfo(engine, fen, depth);
+                    this.results.push(result);
+                }
+                catch (error) {
+                    const result = {
+                        fen: position.fen,
+                        depth: position.depth,
+                        nps: 0,
+                        nodes: 0,
+                        time: 0,
+                        bestMove: "",
+                        engineId: engine.id,
+                        status: "error",
+                    };
+                    this.results.push(result);
+                    logger.error(`Couldn't get position info for engine ${engine.name} and fen ${position.fen}`);
+                }
+            }
+            logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
+            this.printPositionResults(position);
+        }
+        this.printOverallResults();
+    }
+    printEngineStatus() {
+        const engineTable = new Table({
+            head: [chalk.blue("id"), chalk.blue("name"), chalk.blue("executable"), chalk.blue("strings"), chalk.blue("status")],
+            style: {
+                head: [],
+            },
+        });
+        this.engines.forEach((engine) => {
+            if (engine.status === "success") {
+                engineTable.push([engine.id, chalk.green(engine.name), engine.executable, engine.strings.join(" "), engine.status]);
+            }
+            else {
+                engineTable.push([engine.id, chalk.red(engine.name), engine.executable, engine.strings.join(" "), engine.status]);
+            }
+        });
+        logger.nativeLog(chalk.underline("Engines:"));
+        logger.nativeLog(engineTable.toString());
+    }
+    printPositionResults(positionToPrint) {
+        const results = this.results.filter((results) => {
+            return results.fen === positionToPrint.fen && results.depth === positionToPrint.depth;
+        });
+        if (results === undefined) {
+            console.debug("Couldn't find results to print for position: " + positionToPrint);
+            return;
+        }
+        const resultTable = new Table({
+            head: [chalk.blue(`depth: ${positionToPrint.depth}`), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("best move")],
+            style: {
+                head: [],
+            },
+        });
+        results.forEach((result) => {
+            if (result.status === "success") {
+                resultTable.push([this.getEngineNameById(result.engineId), result.time, result.nodes, result.nps, result.bestMove]);
+            }
+            else {
+                resultTable.push([chalk.red(this.getEngineNameById(result.engineId), +" (failed)"), "--", "--", "--", "--"]);
+            }
+        });
+        logger.nativeLog(resultTable.toString());
+    }
+    printOverallResults() {
+        const overallTable = new Table({
+            head: [chalk.blue("Overall"), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("failed")],
+            style: {
+                head: [],
+            },
+        });
+        this.engines.forEach((engine) => {
+            if (engine.status === "error") {
+                return;
+            }
+            const results = this.results.filter((result) => {
+                return result.engineId === engine.id;
+            });
+            let totalTime = 0;
+            let totalNodes = 0;
+            let failedCount = 0;
+            results.forEach((positionResult) => {
+                totalTime += positionResult.time;
+                totalNodes += positionResult.nodes;
+                if (positionResult.status === "error") {
+                    failedCount++;
+                }
+            });
+            overallTable.push([engine.name, totalTime, totalNodes, Math.floor(totalNodes / totalTime * 1000), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
+        });
+        logger.nativeLog(chalk.underline("Overall performance:"));
+        logger.nativeLog(overallTable.toString());
+    }
 }
 
 console.log(figlet.textSync("posttest-cli"));
@@ -234,100 +384,4 @@ if (options.addStockfish) {
         strings: ["./node_modules/stockfish/src/stockfish-nnue-16.js"],
     });
 }
-const results = [];
-for (let i = 0; i < enginesConfigData.length; i++) {
-    const engineResult = {
-        id: i,
-        name: "engine" + i,
-        positions: [],
-        status: "success",
-    };
-    results.push(engineResult);
-    try {
-        let name = await getUCIEngineName(enginesConfigData[i]);
-        if (name.name !== undefined)
-            engineResult.name = name.name;
-    }
-    catch (error) {
-        logger.error(`Couldn't get name of engine ${i} with executable "${enginesConfigData[i].executable}" and strings "${enginesConfigData[i].strings}".`);
-        engineResult.status = "error";
-    }
-}
-const engineTable = new Table({
-    head: [chalk.blue("id"), chalk.blue("name"), chalk.blue("executable"), chalk.blue("strings"), chalk.blue("status")],
-    style: {
-        head: [],
-    },
-});
-results.forEach((engineResult) => {
-    if (engineResult.status === "success") {
-        engineTable.push([engineResult.id, chalk.green(engineResult.name), enginesConfigData[engineResult.id].executable, enginesConfigData[engineResult.id].strings.join(" "), engineResult.status]);
-    }
-    else {
-        engineTable.push([engineResult.id, chalk.red(engineResult.name), enginesConfigData[engineResult.id].executable, enginesConfigData[engineResult.id].strings.join(" "), engineResult.status]);
-    }
-});
-logger.nativeLog(chalk.underline("Engines:"));
-logger.nativeLog(engineTable.toString());
-for (let i = 0; i < positionsConfigData.length; i++) {
-    const position = positionsConfigData[i];
-    const resultTable = new Table({
-        head: [chalk.blue(`${position.fen} | depth: ${position.depth}`), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("best move")],
-        style: {
-            head: [],
-        },
-    });
-    for (let j = 0; j < results.length; j++) {
-        const engineResult = results[j];
-        if (engineResult.status === "error") {
-            continue;
-        }
-        try {
-            const fen = position.fen;
-            const depth = position.depth;
-            const result = await getUCIPositionInfo(enginesConfigData[j], fen, depth);
-            engineResult.positions.push(result);
-            resultTable.push([engineResult.name, result.time, result.nodes, result.nps, result.bestMove]);
-        }
-        catch (error) {
-            const result = {
-                fen: position.fen,
-                depth: position.depth,
-                nps: 0,
-                nodes: 0,
-                time: 0,
-                bestMove: "",
-                status: "error",
-            };
-            engineResult.positions.push(result);
-            resultTable.push([chalk.red(engineResult.name + " (failed)"), "--", "--", "--", "--"]);
-            logger.error(`Couldn't get position info for engine ${engineResult.name} and fen ${position.fen}`);
-        }
-    }
-    logger.nativeLog(chalk.underline(`Position ${i + 1} of ${positionsConfigData.length}:`));
-    logger.nativeLog(resultTable.toString());
-}
-const overallTable = new Table({
-    head: [chalk.blue("Overall"), chalk.blue("time"), chalk.blue("nodes"), chalk.blue("nps"), chalk.blue("failed")],
-    style: {
-        head: [],
-    },
-});
-results.forEach((engineResult) => {
-    if (engineResult.status === "error") {
-        return;
-    }
-    let totalTime = 0;
-    let totalNodes = 0;
-    let failedCount = 0;
-    engineResult.positions.forEach((position) => {
-        totalTime += position.time;
-        totalNodes += position.nodes;
-        if (position.status === "error") {
-            failedCount++;
-        }
-    });
-    overallTable.push([engineResult.name, totalTime, totalNodes, Math.floor(totalNodes / totalTime * 1000), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
-});
-logger.nativeLog(chalk.underline("Overall performance:"));
-logger.nativeLog(overallTable.toString());
+new Run(enginesConfigData, positionsConfigData);

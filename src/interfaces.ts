@@ -15,6 +15,14 @@ export interface EngineConfigData {
     strings: string[],
 }
 
+export interface Engine {
+    id: number,
+    name: string,
+    executable: string,
+    strings: string[],
+    status: "success" | "error",
+}
+
 export interface PositionResult {
     fen: string,
     depth: number,
@@ -22,13 +30,7 @@ export interface PositionResult {
     nodes: number,
     time: number,
     bestMove: string,
-    status: "success" | "error",
-}
-
-export interface EngineResult {
-	id: number,
-	name: string,
-	positions: PositionResult[],
+    engineId: number,
     status: "success" | "error",
 }
 
