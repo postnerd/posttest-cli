@@ -4,7 +4,10 @@ import { getEnginesConfigData, getOptionsFromArgv, getPositionsConfigData, logge
 import figlet from "figlet";
 import Run from "./run.js";
 
+import { name, version, author } from "../package.json";
+
 logger.nativeLog(figlet.textSync("posttest-cli"));
+logger.nativeLog(`${name} ${version} by ${author} \n`);
 
 const options: Options = getOptionsFromArgv(process.argv.slice(2));
 

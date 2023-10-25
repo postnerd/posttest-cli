@@ -394,7 +394,12 @@ class Run {
     }
 }
 
+var name = "posttest-cli";
+var version = "0.1.0-beta_dev";
+var author = "postnerd";
+
 logger.nativeLog(figlet.textSync("posttest-cli"));
+logger.nativeLog(`${name} ${version} by ${author} \n`);
 const options = getOptionsFromArgv(process.argv.slice(2));
 logger.setDebug(options.isDebug);
 const positionsConfigData = getPositionsConfigData(options.positionsPath);
