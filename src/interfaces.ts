@@ -1,7 +1,8 @@
 export interface Options {
 	enginesPath: string,
 	positionsPath: string,
-	isDebug: boolean
+	isDebug: boolean,
+    isSilent: boolean,
     addStockfish: boolean,
 }
 

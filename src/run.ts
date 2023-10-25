@@ -3,13 +3,16 @@ import { getUCIEngineName, getUCIPositionInfo } from "./engine.js";
 import { logger } from "./utils.js";
 import chalk from "chalk";
 import Table from "cli-table3";
+import  ProgressBar from "progress";
 
 export default class Run {
 	engines: Engine[] = [];
 	positions: PositionConfigData[];
 	results: PositionResult[] = [];
+	isSilent: boolean = false;
+	progressBar;
 
-	constructor(engines: EngineConfigData[], positions: PositionConfigData[]) {
+	constructor(engines: EngineConfigData[], positions: PositionConfigData[], isSilent?: boolean) {
 		engines.forEach((engine, index) => {
 			this.engines.push({
 				id: index,
@@ -20,10 +23,13 @@ export default class Run {
 			});
 		});
 		this.positions = positions;
+		this.isSilent = isSilent || false;
 
 		logger.debug(`Setup run object with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
 
 		this.testEngines();
+
+		this.progressBar = new ProgressBar(`Running ${this.engines.length} engines with ${this.positions.length} positions: :bar :percent (Position :pos of ${this.positions.length} with :engine)`, { total: this.positions.length * this.engines.filter((engine) => engine.status === "success").length });
 
 		this.startRun();
 	}
@@ -46,7 +52,7 @@ export default class Run {
 			}
 		});
 
-		this.printEngineStatus();
+		if (!this.isSilent) this.printEngineStatus();
 	}
 
 	async startRun(): Promise<void> {
@@ -56,6 +62,13 @@ export default class Run {
 
 			for (let j = 0; j < this.engines.length; j++) {
 				const engine = this.engines[j];
+
+				if (this.isSilent) {
+					this.progressBar.tick({
+						"pos": i + 1,
+						"engine": engine.name,
+					});
+				}
 
 				if (engine.status === "error") {
 					continue;
@@ -84,11 +97,13 @@ export default class Run {
 					logger.error(`Couldn't get position info for engine ${engine.name} and fen ${position.fen}`);
 				}
 			}
-			logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
-			this.printPositionResults(position);
+			if (!this.isSilent) {
+				logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
+				this.printPositionResults(position);
+			}
 		}
 
-		this.printOverallResults();
+		if (!this.isSilent) this.printOverallResults();
 	}
 
 	printEngineStatus(): void {

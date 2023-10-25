@@ -4,7 +4,7 @@ import { getEnginesConfigData, getOptionsFromArgv, getPositionsConfigData, logge
 import figlet from "figlet";
 import Run from "./run.js";
 
-console.log(figlet.textSync("posttest-cli"));
+logger.nativeLog(figlet.textSync("posttest-cli"));
 
 const options: Options = getOptionsFromArgv(process.argv.slice(2));
 
@@ -20,4 +20,4 @@ if (options.addStockfish) {
 	});
 }
 
-new Run(enginesConfigData, positionsConfigData);
+new Run(enginesConfigData, positionsConfigData, options.isSilent);

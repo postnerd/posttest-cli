@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import figlet from 'figlet';
 import { spawn } from 'child_process';
+import ProgressBar from 'progress';
 
 const logger = {
     isDebug: false,
@@ -34,6 +35,7 @@ function getOptionsFromArgv(input) {
     let positionsPath = undefined;
     let isDebug = false;
     let addStockfish = false;
+    let isSilent = false;
     for (let i = 0; i < input.length; i++) {
         const option = input[i];
         if (option === "-e") {
@@ -47,6 +49,9 @@ function getOptionsFromArgv(input) {
         }
         else if (option === "-sf") {
             addStockfish = true;
+        }
+        else if (option === "-s") {
+            isSilent = true;
         }
     }
     if (enginesPath === undefined || positionsPath === undefined) {
@@ -63,6 +68,7 @@ function getOptionsFromArgv(input) {
         infoTable.push(["-p", "Path to positions config file"]);
         infoTable.push(["-d", "Optional: activate debug mode"]);
         infoTable.push(["-sf", "Optional: add stockfish engine"]);
+        infoTable.push(["-s", "Optional: silent mode to just show a progress"]);
         logger.nativeLog(infoTable.toString());
         logger.nativeLog("");
         logger.nativeLog(chalk.underline("Example for global installation:"));
@@ -77,6 +83,7 @@ function getOptionsFromArgv(input) {
         positionsPath: positionsPath,
         isDebug: isDebug,
         addStockfish: addStockfish,
+        isSilent: isSilent,
     };
     return options;
 }
@@ -232,7 +239,9 @@ class Run {
     engines = [];
     positions;
     results = [];
-    constructor(engines, positions) {
+    isSilent = false;
+    progressBar;
+    constructor(engines, positions, isSilent) {
         engines.forEach((engine, index) => {
             this.engines.push({
                 id: index,
@@ -243,8 +252,10 @@ class Run {
             });
         });
         this.positions = positions;
+        this.isSilent = isSilent || false;
         logger.debug(`Setup run object with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
         this.testEngines();
+        this.progressBar = new ProgressBar(`Running ${this.engines.length} engines with ${this.positions.length} positions: :bar :percent (Position :pos of ${this.positions.length} with :engine)`, { total: this.positions.length * this.engines.filter((engine) => engine.status === "success").length });
         this.startRun();
     }
     getEngineNameById(id) {
@@ -263,7 +274,8 @@ class Run {
                 engine.status = "error";
             }
         });
-        this.printEngineStatus();
+        if (!this.isSilent)
+            this.printEngineStatus();
     }
     async startRun() {
         logger.debug("Starting run ...");
@@ -271,6 +283,12 @@ class Run {
             const position = this.positions[i];
             for (let j = 0; j < this.engines.length; j++) {
                 const engine = this.engines[j];
+                if (this.isSilent) {
+                    this.progressBar.tick({
+                        "pos": i + 1,
+                        "engine": engine.name,
+                    });
+                }
                 if (engine.status === "error") {
                     continue;
                 }
@@ -295,10 +313,13 @@ class Run {
                     logger.error(`Couldn't get position info for engine ${engine.name} and fen ${position.fen}`);
                 }
             }
-            logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
-            this.printPositionResults(position);
+            if (!this.isSilent) {
+                logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
+                this.printPositionResults(position);
+            }
         }
-        this.printOverallResults();
+        if (!this.isSilent)
+            this.printOverallResults();
     }
     printEngineStatus() {
         const engineTable = new Table({
@@ -373,7 +394,7 @@ class Run {
     }
 }
 
-console.log(figlet.textSync("posttest-cli"));
+logger.nativeLog(figlet.textSync("posttest-cli"));
 const options = getOptionsFromArgv(process.argv.slice(2));
 logger.setDebug(options.isDebug);
 const positionsConfigData = getPositionsConfigData(options.positionsPath);
@@ -384,4 +405,4 @@ if (options.addStockfish) {
         strings: ["./node_modules/stockfish/src/stockfish-nnue-16.js"],
     });
 }
-new Run(enginesConfigData, positionsConfigData);
+new Run(enginesConfigData, positionsConfigData, options.isSilent);

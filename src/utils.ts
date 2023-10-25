@@ -36,6 +36,7 @@ export function getOptionsFromArgv(input: string[]): Options {
 	let positionsPath: string | undefined = undefined;
 	let isDebug: boolean = false;
 	let addStockfish: boolean = false;
+	let isSilent: boolean = false;
 
 	for (let i = 0; i < input.length; i++) {
 		const option = input[i];
@@ -51,6 +52,9 @@ export function getOptionsFromArgv(input: string[]): Options {
 		}
 		else if (option === "-sf") {
 			addStockfish = true;
+		}
+		else if (option === "-s") {
+			isSilent = true;
 		}
 	}
 
@@ -70,6 +74,7 @@ export function getOptionsFromArgv(input: string[]): Options {
 		infoTable.push(["-p", "Path to positions config file"]);
 		infoTable.push(["-d", "Optional: activate debug mode"]);
 		infoTable.push(["-sf", "Optional: add stockfish engine"]);
+		infoTable.push(["-s", "Optional: silent mode to just show a progress"]);
 
 		logger.nativeLog(infoTable.toString());
 
@@ -87,6 +92,7 @@ export function getOptionsFromArgv(input: string[]): Options {
 		positionsPath: positionsPath,
 		isDebug: isDebug,
 		addStockfish: addStockfish,
+		isSilent: isSilent,
 	};
 
 	return options;
