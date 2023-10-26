@@ -23,7 +23,7 @@ export const logger: Logger = {
 	},
 	debug: (message: unknown) => {
 		if (logger.isDebug)
-			console.debug(chalk.blue(message));
+			console.debug(chalk.cyan(message));
 	},
 	success: (message: unknown) => {
 		console.log(chalk.green(message));
@@ -112,7 +112,7 @@ export function getOptionsFromArgv(input: string[]): Options {
 
 		logger.log(chalk.underline("Usage:"));
 		const infoTable = new Table({
-			head: [chalk.blue("option"), chalk.blue("description")],
+			head: [chalk.cyan("option"), chalk.cyan("description")],
 			style: {
 				head: [],
 			},
