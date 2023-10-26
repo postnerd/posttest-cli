@@ -28,21 +28,31 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ```
 
 ## Options
-┌────────┬────────────────────────────────┐
-│ option │ description                    │
-├────────┼────────────────────────────────┤
-│ -e     │ Path to engines config file    │
-├────────┼────────────────────────────────┤
-│ -p     │ Path to positions config file  │
-├────────┼────────────────────────────────┤
-│ -d     │ Optional: activate debug mode  │
-├────────┼────────────────────────────────┤
-│ -sf    │ Optional: add stockfish engine │
-└────────┴────────────────────────────────┘
+┌────────┬───────────────────────────────────────────────────────────────────┐
+│ option │ description                                                       │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -e     │ Optional: Path to engines config file (default: engines.json)     │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -p     │ Optional: Path to positions config file (default: positions.json) │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -o     │ Optional: Path to output file for storing results                 │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -d     │ Optional: activate debug mode                                     │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -sf    │ Optional: add stockfish engine                                    │
+├────────┼───────────────────────────────────────────────────────────────────┤
+│ -s     │ Optional: silent mode to just show a progress                     │
+└────────┴───────────────────────────────────────────────────────────────────┘
 
 ### -p position config file
 
-*Example*
+```
+npm start -- -p position.config.example
+```
+
+If no -p option is provided posttest will search for a _positions.json_ file at the root of the executaion folder. 
+
+*Format*
 ```
 [
     {
@@ -52,11 +62,17 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ]
 ```
 
-See the example config file _positions.config.example.json_. All positions are from stockfish internal bench function.
+See the example config file _positions.config.example.json_. All positions are from stockfish's internal bench function.
 
 ### -e engines config file
 
-*Example*
+```
+npm start -- -e engines.config.example
+```
+
+If no -e option is provided posttest will search for a _engines.json_ file at the root of the executaion folder. 
+
+*Format*
 ```
 [
     {
@@ -74,11 +90,35 @@ See the example config file _positions.config.example.json_. All positions are f
 
 See the example config file _engines.config.example.json_.
 
+### -s silent mode
+
+```
+npm start -- -s
+```
+
+Shows just a progress bar. Should be combined with the -o option to log the output to a file.
+
+### -o log output to file
+
+```
+npm start -- -o path/to/file.txt
+```
+
+Logs the results to the specified path.
+
 ### -d debug mode
+
+```
+npm start -- -d
+```
 
 Shows additional debug informations.
 
 ### -sf stockfish
+
+```
+npm start -- -sf
+```
 
 Adds a version of stockfishjs to the performance test without the need to have stockfish added to the engine config file.
 
