@@ -74,8 +74,8 @@ const logger = {
 };
 function getOptionsFromArgv(input) {
     logger.isDebug = true;
-    let enginesPath = undefined;
-    let positionsPath = undefined;
+    let enginesPath = "engines.json";
+    let positionsPath = "positions.json";
     let outputPath = undefined;
     let isDebug = false;
     let addStockfish = false;
@@ -101,31 +101,6 @@ function getOptionsFromArgv(input) {
             isSilent = true;
         }
     }
-    if (enginesPath === undefined || positionsPath === undefined) {
-        logger.error("Missing some mandatory options like -p or -e.");
-        logger.log("");
-        logger.log(chalk.underline("Usage:"));
-        const infoTable = new Table({
-            head: [chalk.cyan("option"), chalk.cyan("description")],
-            style: {
-                head: [],
-            },
-        });
-        infoTable.push(["-e", "Path to engines config file"]);
-        infoTable.push(["-p", "Path to positions config file"]);
-        infoTable.push(["-p", "Path to output file for storing results"]);
-        infoTable.push(["-d", "Optional: activate debug mode"]);
-        infoTable.push(["-sf", "Optional: add stockfish engine"]);
-        infoTable.push(["-s", "Optional: silent mode to just show a progress"]);
-        logger.log(infoTable.toString());
-        logger.log("");
-        logger.log(chalk.underline("Example for global installation:"));
-        logger.log(chalk.italic("posttest -e engines.config.example.json -p positions.config.example.json -d -sf"));
-        logger.log("");
-        logger.log(chalk.underline("Example for local installation:"));
-        logger.log(chalk.italic("npm start -- -e engines.config.example.json -p positions.config.example.json -d -sf"));
-        process.exit();
-    }
     const options = {
         enginesPath: enginesPath,
         positionsPath: positionsPath,
@@ -136,6 +111,28 @@ function getOptionsFromArgv(input) {
     };
     return options;
 }
+function printUsage() {
+    logger.log(chalk.underline("Usage:"));
+    const infoTable = new Table({
+        head: [chalk.cyan("option"), chalk.cyan("description")],
+        style: {
+            head: [],
+        },
+    });
+    infoTable.push(["-e", "Optional: Path to engines config file (default: engines.json)"]);
+    infoTable.push(["-p", "Optional: Path to positions config file (default: positions.json)"]);
+    infoTable.push(["-o", "Optional: Path to output file for storing results"]);
+    infoTable.push(["-d", "Optional: activate debug mode"]);
+    infoTable.push(["-sf", "Optional: add stockfish engine"]);
+    infoTable.push(["-s", "Optional: silent mode to just show a progress"]);
+    logger.log(infoTable.toString());
+    logger.log("");
+    logger.log(chalk.underline("Example for global installation:"));
+    logger.log(chalk.italic("posttest -e engines.config.example.json -p positions.config.example.json -d -sf"));
+    logger.log("");
+    logger.log(chalk.underline("Example for local installation:"));
+    logger.log(chalk.italic("npm start -- -e engines.config.example.json -p positions.config.example.json -d -sf"));
+}
 function getPositionsConfigData(positionsPath) {
     const positionsData = [];
     const url = path.join(process.cwd(), positionsPath);
@@ -144,7 +141,9 @@ function getPositionsConfigData(positionsPath) {
         data = JSON.parse(fs.readFileSync(url).toString());
     }
     catch (error) {
-        logger.error(`Couldn't load position config file from "${url}". Please check name and location of your config file.`);
+        logger.error(`Couldn't load position config file from "${url}". Please check name and location of your config file or specify a config file with the -p option.`);
+        logger.log("");
+        printUsage();
         process.exit();
     }
     // TODO: Check for correct format
@@ -164,7 +163,9 @@ function getEnginesConfigData(enginesPath) {
         data = JSON.parse(fs.readFileSync(url).toString());
     }
     catch (error) {
-        logger.error(`Couldn't load position config file from "${url}". Please check name and location of your config file.`);
+        logger.error(`Couldn't load position config file from "${url}". Please check name and location of your config file or specify a config file with the -e option.`);
+        logger.log("");
+        printUsage();
         process.exit();
     }
     // TODO: Check for correct format
