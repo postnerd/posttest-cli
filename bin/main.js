@@ -2,37 +2,81 @@
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 import figlet from 'figlet';
-import { spawn } from 'child_process';
+import Table from 'cli-table3';
 import ProgressBar from 'progress';
+import stripAnsi from 'strip-ansi';
+import { spawn } from 'child_process';
 
 const logger = {
     isDebug: false,
-    log: (message) => {
-        console.log(chalk.green(message));
-    },
-    nativeLog(message) {
-        console.log(message);
+    isSilent: false,
+    outputPath: undefined,
+    outputStream: undefined,
+    progressBar: undefined,
+    log: (message, addToOutput) => {
+        if (!logger.isSilent)
+            console.log(message);
+        if (addToOutput) {
+            logger.outputStream?.write(stripAnsi(message + "\n"));
+        }
     },
     debug: (message) => {
         if (logger.isDebug)
             console.debug(chalk.blue(message));
     },
+    success: (message) => {
+        console.log(chalk.green(message));
+    },
     error: (message) => {
         console.error(chalk.red(message));
     },
-    setDebug(isDebug) {
-        this.isDebug = isDebug;
+    updateProgressBar: (eninge, pos) => {
+        if (!logger.isSilent)
+            return;
+        logger.progressBar?.tick({
+            engine: eninge,
+            pos: pos,
+        });
+    },
+    setDebug: (isDebug) => {
+        logger.isDebug = isDebug;
         if (isDebug) {
             logger.debug("Debug mode is enabled.");
         }
+    },
+    setSilent: (isSilent) => {
+        logger.isSilent = isSilent;
+    },
+    setOutputPath: (outputPath) => {
+        return new Promise((resolve, reject) => {
+            logger.outputPath = outputPath;
+            logger.outputStream = fs.createWriteStream(outputPath, { flags: "a" });
+            logger.outputStream.on("error", (error) => {
+                logger.error(`Couldn't write to output file "${outputPath}".`);
+                logger.error(error);
+                reject();
+            });
+            logger.outputStream.on("open", () => {
+                logger.success(`Output will be written to file "${outputPath}".`);
+                logger.outputStream?.write(figlet.textSync("posttest-cli") + "\n");
+                logger.outputStream?.write(`posttest-cli run from ${new Date(Date.now()).toLocaleString()} \n`);
+                resolve();
+            });
+            logger.outputStream.on("close", () => {
+                logger.debug(`Output file "${outputPath}" was closed.`);
+            });
+        });
+    },
+    setProgressBar: (engineCount, positionCount) => {
+        logger.progressBar = new ProgressBar(`Running ${engineCount} engine(s) with ${positionCount} position(s): :bar :percent (Position :pos of ${positionCount} with :engine)`, { total: positionCount * engineCount });
     },
 };
 function getOptionsFromArgv(input) {
     logger.isDebug = true;
     let enginesPath = undefined;
     let positionsPath = undefined;
+    let outputPath = undefined;
     let isDebug = false;
     let addStockfish = false;
     let isSilent = false;
@@ -43,6 +87,9 @@ function getOptionsFromArgv(input) {
         }
         else if (option === "-p") {
             positionsPath = input[i + 1];
+        }
+        else if (option === "-o") {
+            outputPath = input[i + 1];
         }
         else if (option === "-d") {
             isDebug = true;
@@ -56,8 +103,8 @@ function getOptionsFromArgv(input) {
     }
     if (enginesPath === undefined || positionsPath === undefined) {
         logger.error("Missing some mandatory options like -p or -e.");
-        logger.nativeLog("");
-        logger.nativeLog(chalk.underline("Usage:"));
+        logger.log("");
+        logger.log(chalk.underline("Usage:"));
         const infoTable = new Table({
             head: [chalk.blue("option"), chalk.blue("description")],
             style: {
@@ -66,21 +113,23 @@ function getOptionsFromArgv(input) {
         });
         infoTable.push(["-e", "Path to engines config file"]);
         infoTable.push(["-p", "Path to positions config file"]);
+        infoTable.push(["-p", "Path to output file for storing results"]);
         infoTable.push(["-d", "Optional: activate debug mode"]);
         infoTable.push(["-sf", "Optional: add stockfish engine"]);
         infoTable.push(["-s", "Optional: silent mode to just show a progress"]);
-        logger.nativeLog(infoTable.toString());
-        logger.nativeLog("");
-        logger.nativeLog(chalk.underline("Example for global installation:"));
-        logger.nativeLog(chalk.italic("posttest -e engines.config.example.json -p positions.config.example.json -d -sf"));
-        logger.nativeLog("");
-        logger.nativeLog(chalk.underline("Example for local installation:"));
-        logger.nativeLog(chalk.italic("npm start -- -e engines.config.example.json -p positions.config.example.json -d -sf"));
+        logger.log(infoTable.toString());
+        logger.log("");
+        logger.log(chalk.underline("Example for global installation:"));
+        logger.log(chalk.italic("posttest -e engines.config.example.json -p positions.config.example.json -d -sf"));
+        logger.log("");
+        logger.log(chalk.underline("Example for local installation:"));
+        logger.log(chalk.italic("npm start -- -e engines.config.example.json -p positions.config.example.json -d -sf"));
         process.exit();
     }
     const options = {
         enginesPath: enginesPath,
         positionsPath: positionsPath,
+        outputPath: outputPath,
         isDebug: isDebug,
         addStockfish: addStockfish,
         isSilent: isSilent,
@@ -239,9 +288,7 @@ class Run {
     engines = [];
     positions;
     results = [];
-    isSilent = false;
-    progressBar;
-    constructor(engines, positions, isSilent) {
+    constructor(engines, positions) {
         engines.forEach((engine, index) => {
             this.engines.push({
                 id: index,
@@ -252,20 +299,22 @@ class Run {
             });
         });
         this.positions = positions;
-        this.isSilent = isSilent || false;
-        logger.debug(`Setup run object with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
-        this.testEngines();
-        this.progressBar = new ProgressBar(`Running ${this.engines.length} engines with ${this.positions.length} positions: :bar :percent (Position :pos of ${this.positions.length} with :engine)`, { total: this.positions.length * this.engines.filter((engine) => engine.status === "success").length });
-        this.startRun();
+        logger.setProgressBar(this.engines.filter(engine => engine.status === "success").length, this.positions.length);
+        logger.debug(`Setup for new run with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
     }
     getEngineNameById(id) {
         return this.engines[id].name;
     }
-    testEngines() {
+    async go() {
+        await this.testEngines();
+        await this.startRun();
+    }
+    async testEngines() {
         logger.debug("Testing engines ...");
-        this.engines.forEach(async (engine) => {
+        for (let i = 0; i < this.engines.length; i++) {
+            const engine = this.engines[i];
             try {
-                let name = await getUCIEngineName(engine);
+                const name = await getUCIEngineName(engine);
                 engine.name = name.name;
                 logger.debug(`UCI spoort for engine ${name.name} detected.`);
             }
@@ -273,9 +322,8 @@ class Run {
                 logger.error(`Engine with executable "${engine.executable}" and strings "${engine.strings}" doesn't work.`);
                 engine.status = "error";
             }
-        });
-        if (!this.isSilent)
-            this.printEngineStatus();
+        }
+        this.printEngineStatus();
     }
     async startRun() {
         logger.debug("Starting run ...");
@@ -283,12 +331,7 @@ class Run {
             const position = this.positions[i];
             for (let j = 0; j < this.engines.length; j++) {
                 const engine = this.engines[j];
-                if (this.isSilent) {
-                    this.progressBar.tick({
-                        "pos": i + 1,
-                        "engine": engine.name,
-                    });
-                }
+                logger.updateProgressBar(engine.name, i + 1);
                 if (engine.status === "error") {
                     continue;
                 }
@@ -313,13 +356,11 @@ class Run {
                     logger.error(`Couldn't get position info for engine ${engine.name} and fen ${position.fen}`);
                 }
             }
-            if (!this.isSilent) {
-                logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
-                this.printPositionResults(position);
-            }
+            const positionInfo = chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen}):`);
+            logger.log(positionInfo, true);
+            this.printPositionResults(position);
         }
-        if (!this.isSilent)
-            this.printOverallResults();
+        this.printOverallResults();
     }
     printEngineStatus() {
         const engineTable = new Table({
@@ -336,8 +377,8 @@ class Run {
                 engineTable.push([engine.id, chalk.red(engine.name), engine.executable, engine.strings.join(" "), engine.status]);
             }
         });
-        logger.nativeLog(chalk.underline("Engines:"));
-        logger.nativeLog(engineTable.toString());
+        logger.log(chalk.underline("Engines:"), true);
+        logger.log(engineTable.toString(), true);
     }
     printPositionResults(positionToPrint) {
         const results = this.results.filter((results) => {
@@ -361,7 +402,7 @@ class Run {
                 resultTable.push([chalk.red(this.getEngineNameById(result.engineId), +" (failed)"), "--", "--", "--", "--"]);
             }
         });
-        logger.nativeLog(resultTable.toString());
+        logger.log(resultTable.toString(), true);
     }
     printOverallResults() {
         const overallTable = new Table({
@@ -389,8 +430,8 @@ class Run {
             });
             overallTable.push([engine.name, totalTime, totalNodes, Math.floor(totalNodes / totalTime * 1000), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
         });
-        logger.nativeLog(chalk.underline("Overall performance:"));
-        logger.nativeLog(overallTable.toString());
+        logger.log(chalk.underline("Overall performance:"), true);
+        logger.log(overallTable.toString(), true);
     }
 }
 
@@ -398,10 +439,14 @@ var name = "posttest-cli";
 var version = "0.1.0-beta_dev";
 var author = "postnerd";
 
-logger.nativeLog(figlet.textSync("posttest-cli"));
-logger.nativeLog(`${name} ${version} by ${author} \n`);
+logger.log(figlet.textSync("posttest-cli"));
+logger.log(`${name} ${version} by ${author} \n`);
 const options = getOptionsFromArgv(process.argv.slice(2));
 logger.setDebug(options.isDebug);
+logger.setSilent(options.isSilent);
+if (options.outputPath) {
+    await logger.setOutputPath(options.outputPath);
+}
 const positionsConfigData = getPositionsConfigData(options.positionsPath);
 const enginesConfigData = getEnginesConfigData(options.enginesPath);
 if (options.addStockfish) {
@@ -410,4 +455,8 @@ if (options.addStockfish) {
         strings: ["./node_modules/stockfish/src/stockfish-nnue-16.js"],
     });
 }
-new Run(enginesConfigData, positionsConfigData, options.isSilent);
+const run = new Run(enginesConfigData, positionsConfigData);
+await run.go();
+if (logger.outputStream) {
+    logger.outputStream.end();
+}

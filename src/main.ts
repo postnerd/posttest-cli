@@ -6,12 +6,16 @@ import Run from "./run.js";
 
 import { name, version, author } from "../package.json";
 
-logger.nativeLog(figlet.textSync("posttest-cli"));
-logger.nativeLog(`${name} ${version} by ${author} \n`);
+logger.log(figlet.textSync("posttest-cli"));
+logger.log(`${name} ${version} by ${author} \n`);
 
 const options: Options = getOptionsFromArgv(process.argv.slice(2));
 
 logger.setDebug(options.isDebug);
+logger.setSilent(options.isSilent);
+if (options.outputPath) {
+	await logger.setOutputPath(options.outputPath);
+}
 
 const positionsConfigData = getPositionsConfigData(options.positionsPath);
 const enginesConfigData = getEnginesConfigData(options.enginesPath);
@@ -23,4 +27,9 @@ if (options.addStockfish) {
 	});
 }
 
-new Run(enginesConfigData, positionsConfigData, options.isSilent);
+const run = new Run(enginesConfigData, positionsConfigData);
+await run.go();
+
+if (logger.outputStream) {
+	logger.outputStream.end();
+}

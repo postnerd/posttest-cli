@@ -3,16 +3,13 @@ import { getUCIEngineName, getUCIPositionInfo } from "./engine.js";
 import { logger } from "./utils.js";
 import chalk from "chalk";
 import Table from "cli-table3";
-import  ProgressBar from "progress";
 
 export default class Run {
 	engines: Engine[] = [];
 	positions: PositionConfigData[];
 	results: PositionResult[] = [];
-	isSilent: boolean = false;
-	progressBar;
 
-	constructor(engines: EngineConfigData[], positions: PositionConfigData[], isSilent?: boolean) {
+	constructor(engines: EngineConfigData[], positions: PositionConfigData[]) {
 		engines.forEach((engine, index) => {
 			this.engines.push({
 				id: index,
@@ -23,26 +20,28 @@ export default class Run {
 			});
 		});
 		this.positions = positions;
-		this.isSilent = isSilent || false;
 
-		logger.debug(`Setup run object with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
-
-		this.testEngines();
-
-		this.progressBar = new ProgressBar(`Running ${this.engines.length} engines with ${this.positions.length} positions: :bar :percent (Position :pos of ${this.positions.length} with :engine)`, { total: this.positions.length * this.engines.filter((engine) => engine.status === "success").length });
-
-		this.startRun();
+		logger.setProgressBar(this.engines.filter(engine => engine.status === "success").length, this.positions.length);
+		logger.debug(`Setup for new run with ${this.engines.length} engines and ${this.positions.length} positions completed.`);
 	}
 
 	getEngineNameById(id: number): string {
 		return this.engines[id].name;
 	}
 
-	testEngines(): void {
+	async go(): Promise<void> {
+		await this.testEngines();
+
+		await this.startRun();
+	}
+
+	async testEngines(): Promise<void> {
 		logger.debug("Testing engines ...");
-		this.engines.forEach(async (engine) => {
+
+		for (let i = 0; i < this.engines.length; i++) {
+			const engine = this.engines[i];
 			try {
-				let name = await getUCIEngineName(engine);
+				const name = await getUCIEngineName(engine);
 				engine.name = name.name!;
 				logger.debug(`UCI spoort for engine ${name.name} detected.`);
 			}
@@ -50,9 +49,9 @@ export default class Run {
 				logger.error(`Engine with executable "${engine.executable}" and strings "${engine.strings}" doesn't work.`);
 				engine.status = "error";
 			}
-		});
+		}
 
-		if (!this.isSilent) this.printEngineStatus();
+		this.printEngineStatus();
 	}
 
 	async startRun(): Promise<void> {
@@ -63,12 +62,7 @@ export default class Run {
 			for (let j = 0; j < this.engines.length; j++) {
 				const engine = this.engines[j];
 
-				if (this.isSilent) {
-					this.progressBar.tick({
-						"pos": i + 1,
-						"engine": engine.name,
-					});
-				}
+				logger.updateProgressBar(engine.name, i + 1);
 
 				if (engine.status === "error") {
 					continue;
@@ -81,7 +75,7 @@ export default class Run {
 					this.results.push(result);
 
 				}
-				catch (error: any) {
+				catch (error: unknown) {
 					const result: PositionResult = {
 						fen: position.fen,
 						depth: position.depth,
@@ -97,13 +91,14 @@ export default class Run {
 					logger.error(`Couldn't get position info for engine ${engine.name} and fen ${position.fen}`);
 				}
 			}
-			if (!this.isSilent) {
-				logger.nativeLog(chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen} | ):`));
-				this.printPositionResults(position);
-			}
+
+			const positionInfo = chalk.underline(`Position ${i + 1} of ${this.positions.length} (fen: ${position.fen}):`);
+			logger.log(positionInfo, true);
+			this.printPositionResults(position);
+
 		}
 
-		if (!this.isSilent) this.printOverallResults();
+		this.printOverallResults();
 	}
 
 	printEngineStatus(): void {
@@ -123,8 +118,8 @@ export default class Run {
 			}
 		});
 
-		logger.nativeLog(chalk.underline("Engines:"));
-		logger.nativeLog(engineTable.toString());
+		logger.log(chalk.underline("Engines:"), true);
+		logger.log(engineTable.toString(), true);
 	}
 
 	printPositionResults(positionToPrint: PositionConfigData): void {
@@ -153,7 +148,7 @@ export default class Run {
 			}
 		});
 
-		logger.nativeLog(resultTable.toString());
+		logger.log(resultTable.toString(), true);
 	}
 
 	printOverallResults(): void {
@@ -188,7 +183,7 @@ export default class Run {
 			overallTable.push([engine.name, totalTime, totalNodes, Math.floor(totalNodes / totalTime * 1000), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
 		});
 
-		logger.nativeLog(chalk.underline("Overall performance:"));
-		logger.nativeLog(overallTable.toString());
+		logger.log(chalk.underline("Overall performance:"), true);
+		logger.log(overallTable.toString(), true);
 	}
 }
