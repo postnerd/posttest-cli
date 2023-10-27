@@ -146,8 +146,15 @@ function getPositionsConfigData(positionsPath) {
         printUsage();
         process.exit();
     }
-    // TODO: Check for correct format
     data.forEach((position) => {
+        if (position.depth === undefined || position.fen === undefined) {
+            logger.error(`Position config file "${url}" has not the correct format or is missing some data.`);
+            process.exit();
+        }
+        if (typeof position.depth !== "number" || typeof position.fen !== "string") {
+            logger.error(`Position config file "${url}" has not the correct format.`);
+            process.exit();
+        }
         positionsData.push({
             fen: position.fen,
             depth: position.depth,
@@ -168,11 +175,25 @@ function getEnginesConfigData(enginesPath) {
         printUsage();
         process.exit();
     }
-    // TODO: Check for correct format
-    data.forEach((eninge) => {
+    data.forEach((engine) => {
+        if (engine.executable === undefined || engine.strings === undefined) {
+            logger.error(`Engine config file "${url}" has not the correct format or is missing some data.`);
+            process.exit();
+        }
+        if (typeof engine.executable !== "string" || typeof engine.strings !== "object") {
+            logger.error(`Engine config file "${url}" has not the correct format.`);
+            process.exit();
+        }
+        for (let i = 0; i < engine.strings.length; i++) {
+            const string = engine.strings[i];
+            if (typeof string !== "string") {
+                logger.error(`Arguments for engine executabel '${engine.executable}' have to be strings. Found wrong format in "${url}".`);
+                process.exit();
+            }
+        }
         enginesData.push({
-            executable: eninge.executable,
-            strings: eninge.strings,
+            executable: engine.executable,
+            strings: engine.strings,
         });
     });
     return enginesData;
