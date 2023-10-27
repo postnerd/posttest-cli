@@ -191,15 +191,20 @@ function getEnginesConfigData(enginesPath) {
                 process.exit();
             }
         }
+        if (engine.name !== undefined && typeof engine.name !== "string") {
+            logger.error(`Engine name has to be a string. Found wrong format in "${url}".`);
+            process.exit();
+        }
         enginesData.push({
             executable: engine.executable,
             strings: engine.strings,
+            name: engine.name,
         });
     });
     return enginesData;
 }
 
-function getUCIEngineName(engine) {
+function testEngineAndgetUCIName(engine) {
     let name = "";
     return new Promise((resolve, reject) => {
         // TODO: Reject after 5 seconds, if engine doesn't respond
@@ -312,9 +317,10 @@ class Run {
     results = [];
     constructor(engines, positions) {
         engines.forEach((engine, index) => {
+            const name = engine.name ?? "engine" + index;
             this.engines.push({
                 id: index,
-                name: "engine" + index,
+                name: name,
                 executable: engine.executable,
                 strings: engine.strings,
                 status: "success",
@@ -336,8 +342,10 @@ class Run {
         for (let i = 0; i < this.engines.length; i++) {
             const engine = this.engines[i];
             try {
-                const name = await getUCIEngineName(engine);
-                engine.name = name.name;
+                const name = await testEngineAndgetUCIName(engine);
+                if (engine.name === "engine" + engine.id) {
+                    engine.name = name.name;
+                }
                 logger.debug(`UCI spoort for engine ${name.name} detected.`);
             }
             catch (error) {

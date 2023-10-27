@@ -53,7 +53,7 @@ npm start -- -p position.config.example
 If no -p option is provided posttest will search for a _positions.json_ file at the root of the executaion folder. 
 
 *Format*
-```
+```json
 [
     {
         "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -73,7 +73,7 @@ npm start -- -e engines.config.example
 If no -e option is provided posttest will search for a _engines.json_ file at the root of the executaion folder. 
 
 *Format*
-```
+```json
 [
     {
         "executable": "/usr/local/bin/node",
@@ -84,11 +84,18 @@ If no -e option is provided posttest will search for a _engines.json_ file at th
     {
         "executable": "postbot",
         "strings": []
+    },
+    {
+        "name": "my lore ipsum",
+        "executable": "loreipsum",
+        "strings": []
     }
 ]
 ```
 
 See the example config file _engines.config.example.json_.
+
+You can specify a name for every engine that will be used infavour of the name provided by the uci name parameter.
 
 ### -s silent mode
 

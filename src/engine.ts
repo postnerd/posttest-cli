@@ -3,7 +3,7 @@ import { logger } from "./utils.js";
 
 import { Engine, EngineNamePromise, PositionResult } from "./interfaces.js";
 
-export function getUCIEngineName(engine: Engine): Promise<EngineNamePromise> {
+export function testEngineAndgetUCIName(engine: Engine): Promise<EngineNamePromise> {
 	let name = "";
 
 	return new Promise<EngineNamePromise>((resolve, reject) => {

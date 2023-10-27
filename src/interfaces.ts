@@ -32,6 +32,7 @@ export interface PositionConfigData {
 }
 
 export interface EngineConfigData {
+    name?: string,
     executable: string,
     strings: string[],
 }

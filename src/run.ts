@@ -1,5 +1,5 @@
 import { EngineConfigData, PositionConfigData, Engine, PositionResult } from "./interfaces.js";
-import { getUCIEngineName, getUCIPositionInfo } from "./engine.js";
+import { testEngineAndgetUCIName, getUCIPositionInfo } from "./engine.js";
 import { logger } from "./utils.js";
 import chalk from "chalk";
 import Table from "cli-table3";
@@ -11,9 +11,10 @@ export default class Run {
 
 	constructor(engines: EngineConfigData[], positions: PositionConfigData[]) {
 		engines.forEach((engine, index) => {
+			const name = engine.name ?? "engine" + index;
 			this.engines.push({
 				id: index,
-				name: "engine" + index,
+				name: name,
 				executable: engine.executable,
 				strings: engine.strings,
 				status: "success",
@@ -41,8 +42,10 @@ export default class Run {
 		for (let i = 0; i < this.engines.length; i++) {
 			const engine = this.engines[i];
 			try {
-				const name = await getUCIEngineName(engine);
-				engine.name = name.name!;
+				const name = await testEngineAndgetUCIName(engine);
+				if (engine.name === "engine" + engine.id) {
+					engine.name = name.name!;
+				}
 				logger.debug(`UCI spoort for engine ${name.name} detected.`);
 			}
 			catch (error) {

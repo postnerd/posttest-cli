@@ -214,9 +214,15 @@ export function getEnginesConfigData(enginesPath: string): EngineConfigData[] {
 			}
 		}
 
+		if (engine.name !== undefined && typeof engine.name !== "string") {
+			logger.error(`Engine name has to be a string. Found wrong format in "${url}".`);
+			process.exit();
+		}
+
 		enginesData.push({
 			executable: engine.executable,
 			strings: engine.strings,
+			name: engine.name,
 		});
 	});
 
