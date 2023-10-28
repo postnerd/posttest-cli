@@ -1,10 +1,11 @@
+```
                   _   _            _             _ _
   _ __   ___  ___| |_| |_ ___  ___| |_       ___| (_)
  | '_ \ / _ \/ __| __| __/ _ \/ __| __|____ / __| | |
  | |_) | (_) \__ \ |_| ||  __/\__ \ ||_____| (__| | |
  | .__/ \___/|___/\__|\__\___||___/\__|     \___|_|_|
  |_|
-
+```
 > **⚠ WARNING: This is a beta version**  
 > This app is in early development. Some features may be broken. Use at your own risk.
 ----------
@@ -28,6 +29,7 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ```
 
 ## Options
+```
 ┌────────┬───────────────────────────────────────────────────────────────────┐
 │ option │ description                                                       │
 ├────────┼───────────────────────────────────────────────────────────────────┤
@@ -43,7 +45,7 @@ npm start -- -e engines.config.example.json -p positions.config.example.json -d 
 ├────────┼───────────────────────────────────────────────────────────────────┤
 │ -s     │ Optional: silent mode to just show a progress                     │
 └────────┴───────────────────────────────────────────────────────────────────┘
-
+```
 ### -p position config file
 
 ```
