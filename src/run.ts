@@ -102,6 +102,7 @@ export default class Run {
 		}
 
 		this.printOverallResults();
+		this.printEngineComparison();
 	}
 
 	printEngineStatus(): void {
@@ -123,6 +124,7 @@ export default class Run {
 
 		logger.log(chalk.underline("Engines:"), true);
 		logger.log(engineTable.toString(), true);
+		logger.log("", true);
 	}
 
 	printPositionResults(positionToPrint: PositionConfigData): void {
@@ -152,6 +154,7 @@ export default class Run {
 		});
 
 		logger.log(resultTable.toString(), true);
+		logger.log("", true);
 	}
 
 	printOverallResults(): void {
@@ -183,10 +186,65 @@ export default class Run {
 				}
 			});
 
-			overallTable.push([engine.name, totalTime, totalNodes, Math.floor(totalNodes / totalTime * 1000), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
+			const totalNPS = totalNodes / totalTime * 1000;
+
+			overallTable.push([engine.name, totalTime, totalNodes, Math.floor(totalNPS), `${failedCount ? chalk.red(failedCount) : failedCount}`]);
 		});
 
 		logger.log(chalk.underline("Overall performance:"), true);
 		logger.log(overallTable.toString(), true);
+		logger.log("", true);
+	}
+
+	printEngineComparison(): void {
+		this.engines.filter(engine => engine.status === "success").forEach((engine) => {
+			const results = this.results.filter((result) => {
+				return result.engineId === engine.id;
+			});
+
+			const head = [chalk.cyan("Engine comparison"), chalk.cyan("time +/-"), chalk.cyan("nodes +/-"), chalk.cyan("nps +/-")];
+			const timeComparisonTable = new Table({
+				head: head,
+				style: {
+					head: [],
+				},
+			});
+
+			let totalTime = 0;
+			let totalNodes = 0;
+
+			results.forEach((positionResult) => {
+				totalTime += positionResult.time;
+				totalNodes += positionResult.nodes;
+			});
+
+			const totalNPS = totalNodes / totalTime * 1000;
+
+			timeComparisonTable.push([chalk.underline(engine.name), totalTime, totalNodes, Math.floor(totalNPS)]);
+
+			this.engines.filter(engine => engine.status === "success").forEach((compareEngine) => {
+				if (engine.id === compareEngine.id) {
+					return;
+				}
+
+				const compareResults = this.results.filter((result) => {
+					return result.engineId === compareEngine.id;
+				});
+
+				let compareTotalTime = 0;
+				let compareTotalNodes = 0;
+
+				compareResults.forEach((positionResult) => {
+					compareTotalTime += positionResult.time;
+					compareTotalNodes += positionResult.nodes;
+				});
+
+				const compareTotalNPS = compareTotalNodes / compareTotalTime * 1000;
+
+				timeComparisonTable.push([`- ${compareEngine.name}`, `${Math.floor((totalTime - compareTotalTime) / compareTotalTime * 100)} %`, `${Math.floor((totalNodes - compareTotalNodes) / compareTotalNodes * 100)} %`, `${Math.floor((compareTotalNPS - totalNPS) / totalNPS * 100)} %`]);
+			});
+			logger.log(timeComparisonTable.toString(), true);
+			logger.log("", true);
+		});
 	}
 }
