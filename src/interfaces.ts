@@ -35,6 +35,7 @@ export interface EngineConfigData {
     name?: string,
     executable: string,
     strings: string[],
+    advancedComparison?: boolean,
 }
 
 export interface Engine {
@@ -42,6 +43,7 @@ export interface Engine {
     name: string,
     executable: string,
     strings: string[],
+    advancedComparison: boolean,
     status: "success" | "error",
 }
 

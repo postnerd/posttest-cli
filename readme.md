@@ -70,7 +70,7 @@ See the example config file _positions.config.example.json_. All positions are f
 npm start -- -e engines.config.example
 ```
 
-If no -e option is provided posttest will search for a _engines.json_ file at the root of the executaion folder. 
+If no -e option is provided posttest will search for a _engines.json_ file at the root of the execution folder. 
 
 *Format*
 ```json
@@ -79,7 +79,8 @@ If no -e option is provided posttest will search for a _engines.json_ file at th
         "executable": "/usr/local/bin/node",
         "strings": [
             "./node_modules/stockfish/src/stockfish-nnue-16-no-simd.js"
-        ]
+        ],
+        "advancedComparison": true
     },
     {
         "executable": "postbot",
@@ -95,7 +96,11 @@ If no -e option is provided posttest will search for a _engines.json_ file at th
 
 See the example config file _engines.config.example.json_.
 
+#### Optional: name
 You can specify a name for every engine that will be used infavour of the name provided by the uci name parameter.
+
+#### Optional: advancedComparison
+If you want to have an advanced comparison table printed and logged at the end of the tests for one or more engines, you can set the _advancedComparison_ flag.
 
 ### -s silent mode
 

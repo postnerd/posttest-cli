@@ -195,10 +195,15 @@ function getEnginesConfigData(enginesPath) {
             logger.error(`Engine name has to be a string. Found wrong format in "${url}".`);
             process.exit();
         }
+        if (engine.advancedComparison !== undefined && typeof engine.advancedComparison !== "boolean") {
+            logger.error(`Advanced comparison has to be a boolean. Found wrong format in "${url}".`);
+            process.exit();
+        }
         enginesData.push({
             executable: engine.executable,
             strings: engine.strings,
             name: engine.name,
+            advancedComparison: engine.advancedComparison,
         });
     });
     return enginesData;
@@ -323,6 +328,7 @@ class Run {
                 name: name,
                 executable: engine.executable,
                 strings: engine.strings,
+                advancedComparison: engine.advancedComparison ?? false,
                 status: "success",
             });
         });
@@ -469,7 +475,7 @@ class Run {
         logger.log("", true);
     }
     printEngineComparison() {
-        this.engines.filter(engine => engine.status === "success").forEach((engine) => {
+        this.engines.filter(engine => engine.status === "success" && engine.advancedComparison).forEach((engine) => {
             const results = this.results.filter((result) => {
                 return result.engineId === engine.id;
             });

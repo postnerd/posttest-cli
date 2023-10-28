@@ -219,10 +219,16 @@ export function getEnginesConfigData(enginesPath: string): EngineConfigData[] {
 			process.exit();
 		}
 
+		if (engine.advancedComparison !== undefined && typeof engine.advancedComparison !== "boolean") {
+			logger.error(`Advanced comparison has to be a boolean. Found wrong format in "${url}".`);
+			process.exit();
+		}
+
 		enginesData.push({
 			executable: engine.executable,
 			strings: engine.strings,
 			name: engine.name,
+			advancedComparison: engine.advancedComparison,
 		});
 	});
 

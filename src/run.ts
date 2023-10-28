@@ -17,6 +17,7 @@ export default class Run {
 				name: name,
 				executable: engine.executable,
 				strings: engine.strings,
+				advancedComparison: engine.advancedComparison ?? false,
 				status: "success",
 			});
 		});
@@ -197,7 +198,7 @@ export default class Run {
 	}
 
 	printEngineComparison(): void {
-		this.engines.filter(engine => engine.status === "success").forEach((engine) => {
+		this.engines.filter(engine => engine.status === "success" && engine.advancedComparison).forEach((engine) => {
 			const results = this.results.filter((result) => {
 				return result.engineId === engine.id;
 			});

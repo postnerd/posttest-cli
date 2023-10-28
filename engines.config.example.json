@@ -3,6 +3,7 @@
         "executable": "/usr/local/bin/node",
         "strings": [
             "./node_modules/stockfish/src/stockfish-nnue-16-no-simd.js"
-        ]
+        ],
+        "advancedComparison": true
     }
 ]
