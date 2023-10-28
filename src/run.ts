@@ -241,7 +241,7 @@ export default class Run {
 
 				const compareTotalNPS = compareTotalNodes / compareTotalTime * 1000;
 
-				timeComparisonTable.push([`- ${compareEngine.name}`, `${Math.floor((totalTime - compareTotalTime) / compareTotalTime * 100)} %`, `${Math.floor((totalNodes - compareTotalNodes) / compareTotalNodes * 100)} %`, `${Math.floor((compareTotalNPS - totalNPS) / totalNPS * 100)} %`]);
+				timeComparisonTable.push([`- ${compareEngine.name}`, `${Math.floor((compareTotalTime - totalTime) / totalTime * 100)} %`, `${Math.floor((compareTotalNodes - totalNodes) / totalNodes * 100)} %`, `${Math.floor((totalNPS - compareTotalNPS) / compareTotalNPS * 100)} %`]);
 			});
 			logger.log(timeComparisonTable.toString(), true);
 			logger.log("", true);
