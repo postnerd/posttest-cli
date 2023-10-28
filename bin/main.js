@@ -517,7 +517,7 @@ class Run {
 }
 
 var name = "posttest-cli";
-var version = "0.1.0-beta_dev";
+var version = "0.1.0-beta";
 var author = "postnerd";
 
 logger.log(figlet.textSync("posttest-cli"));

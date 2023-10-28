@@ -1,6 +1,6 @@
 {
   "name": "posttest-cli",
-  "version": "0.1.0-beta_dev",
+  "version": "0.1.0-beta",
   "description": "A test framework for postbot and other uci chess engines",
   "main": "bin/main.js",
   "type": "module",

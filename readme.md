@@ -5,7 +5,7 @@
  | .__/ \___/|___/\__|\__\___||___/\__|     \___|_|_|
  |_|
 
-> **⚠ WARNING: This is an alpha version**  
+> **⚠ WARNING: This is a beta version**  
 > This app is in early development. Some features may be broken. Use at your own risk.
 ----------
 
@@ -133,4 +133,3 @@ npm start -- -sf
 ```
 
 Adds a version of stockfishjs to the performance test without the need to have stockfish added to the engine config file.
-
