@@ -1,15 +1,18 @@
-import { spawn } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import { logger } from "./utils.js";
 
-import { EngineConfigData, EngineNamePromise, PositionResult } from "./interfaces.js";
+import { Engine, EngineNamePromise, PositionResult } from "./interfaces.js";
 
-export function getUCIEngineName(engineConfig: EngineConfigData): Promise<EngineNamePromise> {
+export function testEngineAndgetUCIName(engine: Engine): Promise<EngineNamePromise> {
 	let name = "";
+
 	return new Promise<EngineNamePromise>((resolve, reject) => {
 		// TODO: Reject after 5 seconds, if engine doesn't respond
-		const engine = spawn(engineConfig.executable, engineConfig.strings);
+		const engineProcess: ChildProcess = spawn(engine.executable, engine.strings);
 
-		engine.stdout.on("data", (data) => {
+		if (engineProcess.stdout === null || engineProcess.stderr === null || engineProcess.stdin === null) throw new Error("engines stdout, stdin or stderr is null");
+
+		engineProcess.stdout.on("data", (data) => {
 			const lines = data.toString().split("\n");
 
 			for (let i = 0; i < lines.length; i++) {
@@ -19,24 +22,24 @@ export function getUCIEngineName(engineConfig: EngineConfigData): Promise<Engine
 						name = lineData.slice(i + 2).join(" ");
 					}
 					else if (lineData[i] === "uciok") {
-						engine.stdin.end();
+						engineProcess.stdin!.end();
 					}
 				}
 			}
 		});
 
-		engine.stderr.on("data", (data) => {
+		engineProcess.stderr.on("data", (data) => {
 			logger.debug(`${data}`);
 		});
 
-		engine.on("error", (error) => {
+		engineProcess.on("error", (error) => {
 			reject({
 				status: "error",
 				error: error.message,
 			});
 		});
 
-		engine.on("close", (code) => {
+		engineProcess.on("close", (code) => {
 			logger.debug(`Child process exited with code ${code}`);
 			if (name === "") {
 				reject({
@@ -52,11 +55,11 @@ export function getUCIEngineName(engineConfig: EngineConfigData): Promise<Engine
 			}
 		});
 
-		engine.stdin.write("uci\n");
+		engineProcess.stdin.write("uci\n");
 	});
 }
 
-export function getUCIPositionInfo(engineConfig: EngineConfigData, fen: string, depth: number): Promise<PositionResult> {
+export function getUCIPositionInfo(engine: Engine, fen: string, depth: number): Promise<PositionResult> {
 	return new Promise<PositionResult>((resolve, reject) => {
 		let nps = 0;
 		let nodes = 0;
@@ -64,9 +67,11 @@ export function getUCIPositionInfo(engineConfig: EngineConfigData, fen: string, 
 		let bestMove = "";
 
 		// TODO: Reject after X seconds, if engine doesn't respond
-		const engine = spawn(engineConfig.executable, engineConfig.strings);
+		const engineProcess: ChildProcess = spawn(engine.executable, engine.strings);
 
-		engine.stdout.on("data", (data) => {
+		if (engineProcess.stdout === null || engineProcess.stderr === null || engineProcess.stdin === null) throw new Error("engines stdout, stdin or stderr is null");
+
+		engineProcess.stdout.on("data", (data) => {
 			const lines = data.toString().split("\n");
 
 			for (let i = 0; i < lines.length; i++) {
@@ -86,21 +91,21 @@ export function getUCIPositionInfo(engineConfig: EngineConfigData, fen: string, 
 					}
 					else if (lineData[i] === "bestmove") {
 						bestMove = lineData[i + 1];
-						engine.stdin.end();
+						engineProcess.stdin!.end();
 					}
 				}
 			}
 		});
 
-		engine.stderr.on("data", (data) => {
+		engineProcess.stderr.on("data", (data) => {
 			logger.debug(`${data}`);
 		});
 
-		engine.on("error", (error) => {
+		engineProcess.on("error", (error) => {
 			reject(error.message);
 		});
 
-		engine.on("close", (code) => {
+		engineProcess.on("close", (code) => {
 			logger.debug(`Child process exited with code ${code}`);
 
 			if (bestMove === "" || nodes === 0) {
@@ -114,11 +119,12 @@ export function getUCIPositionInfo(engineConfig: EngineConfigData, fen: string, 
 				nodes: nodes,
 				time: time,
 				bestMove: bestMove,
+				engineId: engine.id,
 				status: "success",
 			});
 		});
 
-		engine.stdin.write(`position fen ${fen}\n`);
-		engine.stdin.write(`go depth ${depth}\n`);
+		engineProcess.stdin.write(`position fen ${fen}\n`);
+		engineProcess.stdin.write(`go depth ${depth}\n`);
 	});
 }

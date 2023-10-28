@@ -1,8 +1,29 @@
+import fs from "fs";
+
 export interface Options {
 	enginesPath: string,
 	positionsPath: string,
-	isDebug: boolean
+    outputPath: string | undefined,
+	isDebug: boolean,
+    isSilent: boolean,
     addStockfish: boolean,
+}
+
+export interface Logger {
+	isDebug: boolean,
+	isSilent: boolean,
+	outputPath: string | undefined,
+	outputStream: fs.WriteStream | undefined,
+	progressBar: ProgressBar | undefined,
+	log: (message: unknown, addToOutput?: boolean) => void,
+	debug: (message: unknown) => void,
+	success: (message: unknown) => void,
+	error: (message: unknown) => void,
+	updateProgressBar: (eninge: string, pos: number) => void,
+	setDebug: (isDebug: boolean) => void,
+	setSilent: (isSilent: boolean) => void,
+	setOutputPath: (outputPath: string) => void,
+	setProgressBar: (engineCount: number, positionCount: number) => void,
 }
 
 export interface PositionConfigData {
@@ -11,8 +32,19 @@ export interface PositionConfigData {
 }
 
 export interface EngineConfigData {
+    name?: string,
     executable: string,
     strings: string[],
+    advancedComparison?: boolean,
+}
+
+export interface Engine {
+    id: number,
+    name: string,
+    executable: string,
+    strings: string[],
+    advancedComparison: boolean,
+    status: "success" | "error",
 }
 
 export interface PositionResult {
@@ -22,13 +54,7 @@ export interface PositionResult {
     nodes: number,
     time: number,
     bestMove: string,
-    status: "success" | "error",
-}
-
-export interface EngineResult {
-	id: number,
-	name: string,
-	positions: PositionResult[],
+    engineId: number,
     status: "success" | "error",
 }
 
