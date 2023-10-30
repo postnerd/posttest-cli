@@ -13,9 +13,9 @@
 ## Usage
 
 ```
-git clone <path>
+git clone https://github.com/postnerd/posttest-cli.git
 cd posttest-cli
-npm install || npm install . -g
+npm install OR npm install . -g
 ```
 
 *Example for global installation:*
